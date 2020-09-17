@@ -50,18 +50,28 @@ const User = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       allowNull: false,
     },
+    followers: {
+      type: DataTypes.ARRAY(DataTypes.STRING),
+    },
   });
 
   User.findByLogin = async (login) => {
-    let user = await User.findOne({
-      where: { username: login },
-    });
+    let user;
 
-    if (!user) {
+    try {
       user = await User.findOne({
-        where: { email: login },
+        where: { username: login },
       });
+
+      if (!user) {
+        user = await User.findOne({
+          where: { email: login },
+        });
+      }
+    } catch (error) {
+      throw error;
     }
+
     return user;
   };
 

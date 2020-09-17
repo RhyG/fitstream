@@ -4,7 +4,7 @@ const bodyParser = require("body-parser");
 
 require("dotenv").config();
 
-require("./middleware/auth");
+require("./auth/auth");
 
 // Databse
 const db = require("./db/connection");

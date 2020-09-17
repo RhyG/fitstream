@@ -1,15 +1,15 @@
 const express = require("express");
-const passport = require("passport");
-const jwt = require("jsonwebtoken");
 
 const { register, login } = require("../controllers/authController");
+const { subscribeToChannel } = require("../controllers/subscribe");
+const { authenticateJWT } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.post("/register", passport.authenticate("register", { session: false }), register);
+router.post("/register", register);
 router.post("/login", login);
 
-router.get("/profile", passport.authenticate("jwt", { session: false }), (req, res, next) => {
+router.get("/profile", authenticateJWT, (req, res, next) => {
   // Send back user details and token
   res.json({
     message: "Secure route",
@@ -17,5 +17,7 @@ router.get("/profile", passport.authenticate("jwt", { session: false }), (req, r
     token: req.query.secret_token,
   });
 });
+
+router.post("/subscribe/:id", authenticateJWT, subscribeToChannel);
 
 module.exports = router;

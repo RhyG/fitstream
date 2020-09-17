@@ -1,17 +1,30 @@
 const passport = require("passport");
 const jwt = require("jsonwebtoken");
 
+const { generateJWT } = require("../lib/auth");
 const { user: User } = require("../db/models");
 
 exports.register = async (req, res) => {
   const { username, email, password, firstName, lastName, isStreamer } = req.body;
-  console.log("Creating user:", username);
+  console.log("Creating user:", email);
+
+  const existingUser = await User.findOne({
+    where: {
+      email,
+    },
+  });
+
+  if (existingUser) {
+    return res.status(400).send("User already exists");
+  }
 
   try {
     const newUser = await User.create({ username, email, password, firstName, lastName, isStreamer });
-    return res.status(200).send(newUser);
+
+    const { id, username, email } = newUser;
+
+    return res.status(200).send({ id, username, email });
   } catch (err) {
-    console.log(err);
     return res.send(err);
   }
 };
@@ -19,23 +32,18 @@ exports.register = async (req, res) => {
 exports.login = async (req, res, next) => {
   passport.authenticate("login", async (err, user, info) => {
     try {
-      if (!user) {
-        return next(new Error("User not found"));
+      if (err) {
+        console.log(err);
+        return res.status(500).send({ message: "Internal server error." });
       }
 
-      if (err) {
-        return next(new Error("An error occured"));
+      if (!user) {
+        return res.status(404).send({ message: "User not found" });
       }
 
       req.login(user, { session: false }, async (error) => {
         if (error) return next(error);
-
-        //We don't want to store the sensitive information such as the
-        //user password in the token so we pick only the email and id
-        const body = { id: user.id, email: user.email };
-        //Sign the JWT token and populate the payload with the user email and id
-        const token = jwt.sign({ user: body }, "top_secret");
-        //Send back the token to the user
+        const token = generateJWT(user);
         return res.json({ token });
       });
     } catch (error) {
@@ -43,3 +51,5 @@ exports.login = async (req, res, next) => {
     }
   })(req, res, next);
 };
+
+exports.refreshToken = async (req, res) => {};
