@@ -1,6 +1,6 @@
 const express = require("express");
 
-const { register, login } = require("../controllers/authController");
+const { register, login, refreshToken } = require("../controllers/authController");
 const { subscribeToChannel } = require("../controllers/subscribe");
 const { authenticateJWT } = require("../middleware/auth");
 
@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
+router.post("/login/refresh", refreshToken);
 
 router.get("/profile", authenticateJWT, (req, res, next) => {
   // Send back user details and token

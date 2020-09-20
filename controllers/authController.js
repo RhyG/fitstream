@@ -1,7 +1,7 @@
 const passport = require("passport");
-const jwt = require("jsonwebtoken");
+const randtoken = require("rand-token");
 
-const { generateJWT } = require("../lib/auth");
+const { generateJWT, generateTokenHash } = require("../lib/auth");
 const { user: User } = require("../db/models");
 
 exports.register = async (req, res) => {
@@ -23,9 +23,9 @@ exports.register = async (req, res) => {
 
     const { id, username, email } = newUser;
 
-    return res.status(200).send({ id, username, email });
+    res.status(200).send({ id, username, email });
   } catch (err) {
-    return res.send(err);
+    res.send(err);
   }
 };
 
@@ -43,13 +43,70 @@ exports.login = async (req, res, next) => {
 
       req.login(user, { session: false }, async (error) => {
         if (error) return next(error);
+
         const token = generateJWT(user);
-        return res.json({ token });
+        const refreshToken = randtoken.uid(256);
+
+        await User.update(
+          {
+            refreshToken: generateTokenHash(refreshToken),
+          },
+          {
+            where: {
+              id: user.id,
+            },
+          }
+        );
+
+        res.json({ token, refreshToken });
       });
     } catch (error) {
-      return next(error);
+      next(error);
     }
   })(req, res, next);
 };
 
-exports.refreshToken = async (req, res) => {};
+exports.refreshToken = async (req, res) => {
+  try {
+    const user = await User.findOne({
+      where: {
+        refreshToken: req.body.refreshToken,
+      },
+    });
+
+    if (!user) {
+      return res.status(401).json({ status: "fail", message: "Refresh token invalid or expired." });
+    }
+
+    req.login(user, { session: false }, async (error) => {
+      if (error) return res.send(error);
+
+      const token = generateJWT(user);
+
+      res.json({ token });
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ status: "Fail", message: "Internal server error" });
+  }
+};
+
+exports.disableToken = async (req, res) => {
+  try {
+    const user = User.findOne({
+      where: {
+        refreshToken: req.body.refreshToken,
+      },
+    });
+
+    if (!user) {
+      return res.status(401).json({ status: "fail", message: "Refresk token invalid or expired." });
+    }
+
+    await user.update({ refreshToken: null });
+    res.send(204);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ status: "Fail", message: "Internal server error" });
+  }
+};

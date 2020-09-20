@@ -32,6 +32,9 @@ const User = (sequelize, DataTypes) => {
         len: [7, 42],
       },
     },
+    refreshToken: {
+      type: DataTypes.STRING(2000),
+    },
     firstName: {
       type: DataTypes.STRING,
       unique: false,

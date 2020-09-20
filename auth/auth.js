@@ -33,6 +33,7 @@ passport.use(
       passwordField: "password",
     },
     async (login, password, done) => {
+      console.log("HERE");
       try {
         const user = await User.findByLogin(login);
 
@@ -62,6 +63,10 @@ passport.use(
     },
     async (token, done) => {
       try {
+        if (token.iat > new Date()) {
+          return done(null, false);
+        }
+
         return done(null, token.user);
       } catch (error) {
         done(error);
